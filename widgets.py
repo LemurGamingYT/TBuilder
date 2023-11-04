@@ -1,5 +1,6 @@
 from customtkinter import (
-    CTkButton, CTkLabel, CTkFrame, CTk, CTkToplevel, CTkEntry, CTkScrollableFrame
+    CTkButton, CTkLabel, CTkFrame, CTk, CTkToplevel, CTkEntry, CTkScrollableFrame, CTkOptionMenu,
+    CTkCheckBox
 )
 
 from tkinter import Menu
@@ -33,5 +34,15 @@ class Entry(CTkEntry):
 
 
 class ScrollableFrame(CTkScrollableFrame):
+    def place(self, relx: float, rely: float, relw: float, relh: float, anchor: str = 'c') -> None:
+        super().place(relx=relx, rely=rely, relw=relw, relh=relh, anchor=anchor)
+
+
+class OptionMenu(CTkOptionMenu):
+    def place(self, relx: float, rely: float, relw: float, relh: float, anchor: str = 'c') -> None:
+        super().place(relx=relx, rely=rely, relw=relw, relh=relh, anchor=anchor)
+
+
+class CheckBox(CTkCheckBox):
     def place(self, relx: float, rely: float, relw: float, relh: float, anchor: str = 'c') -> None:
         super().place(relx=relx, rely=rely, relw=relw, relh=relh, anchor=anchor)

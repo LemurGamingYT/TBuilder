@@ -1,12 +1,12 @@
 from tkinter.filedialog import askdirectory
-from json import loads, dumps
 from pathlib import Path
+from json import loads
 
 from customtkinter import set_appearance_mode
 set_appearance_mode('dark')
 
 from widgets import Frame, Tk, Button, Label, TopLevel, Entry
-from writer import create_project, JSON
+from writer import create_project, update_json
 from editor import Editor
 
 
@@ -58,17 +58,10 @@ class ImportProject(TopLevel):
     def import_dir(self):
         p = Path(askdirectory(title='Project Path Select', mustexist=True))
         if p.exists():
-            projects_json = Path('./projects.json')
-            
-            j = {}
-            if projects_json.exists():
-                j = loads(projects_json.read_text())
-            
-            j[p.name] = loads((p / 'tbuild.json').read_text())
-            
-            projects_json.write_text(dumps(j, indent=4))
-            
+            data = loads((p / 'tbuild.json').read_text())
+            update_json(p.name, data)
             self.destroy()
+            Editor(self.parent, data)
 
 
 class NewProject(TopLevel):

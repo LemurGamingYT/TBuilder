@@ -34,6 +34,18 @@ LAUNCH_SETTINGS = {
 }
 
 
+def update_json(key: str, json: dict):
+    projects_json = Path('./projects.json')
+    
+    j = {}
+    if projects_json.exists():
+        j = loads(projects_json.read_text())
+    
+    j[key] = json
+    
+    projects_json.write_text(dumps(j, indent=4))
+
+
 def create_project(path: Path, window: TopLevel) -> dict:
     name = window.name.get()
     project = Path(path / name)
@@ -58,14 +70,7 @@ def create_project(path: Path, window: TopLevel) -> dict:
     copyfile('./assets/cs/TBuildUtility.cs', (project / 'TBuildUtility.cs'))
     
     
-    projects_json = Path('./projects.json')
+    update_json(name, json)
     
-    j = {}
-    if projects_json.exists():
-        j = loads(projects_json.read_text())
-    
-    j[name] = json
-    
-    projects_json.write_text(dumps(j, indent=4))
     
     return json

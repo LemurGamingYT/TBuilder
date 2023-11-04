@@ -1,8 +1,11 @@
 from pickle import loads, dumps
+from typing import Callable
 from tkinter import Event
 from pathlib import Path
 
-from widgets import Tk, Label, ScrollableFrame, Menu, Button, Entry
+from widgets import Tk, Label, ScrollableFrame, Menu, Button, Entry, OptionMenu, CheckBox
+from callbacks import entry_callback, create_value_field
+from constants import BUFFS, AISTYLES
 from classes.npc import NPC
 
 
@@ -31,8 +34,7 @@ class Editor:
         
         self.properties = ScrollableFrame(
             tk,
-            fg_color='#011e00',
-            orientation='horizontal'
+            fg_color='#011e00'
         )
         self.properties.place(.65, .5, .75, 1)
         
@@ -81,20 +83,58 @@ class Editor:
         (self.project_path / 'Content' / 'NewNPC').write_bytes(dumps(npc))
         self.load_mod_content(self.project_path)
     
+    entry_args = {'font': ('Arial', 15, 'bold')}
+    
+    npc_data = {
+        'Name': {'callback': entry_callback},
+        'Life': {'callback': entry_callback},
+        'Max Life': {'callback': entry_callback},
+        'Defense': {'callback': entry_callback},
+        'Width': {'callback': entry_callback},
+        'Height': {'callback': entry_callback},
+        'Value': {'callback': create_value_field},
+        'Alpha': {'callback': entry_callback},
+        'Damage': {'callback': entry_callback},
+        'NPC Frames': {'callback': entry_callback},
+        'AIStyle': {'use_widget': OptionMenu, 'values': AISTYLES},
+        'Apply Buff': {'use_widget': OptionMenu, 'values': BUFFS},
+        'Apply Buff Seconds': {'callback': entry_callback},
+        'AI Style': {'callback': entry_callback},
+        'Copy NPC Id': {'callback': entry_callback},
+        'Boss': {'use_widget': CheckBox, 'text': ''},
+        'No Gravity': {'use_widget': CheckBox, 'text': ''},
+        'No Tile Collide': {'use_widget': CheckBox, 'text': ''},
+    }
+    
     def open_properties(self, cls: NPC):
         if isinstance(cls, NPC):
-            Label(
-                self.properties,
-                fg_color='#011e00',
-                text='Name',
-                font=('Arial', 20, 'bold')
-            ).place(.1, .05, .2, .05)
-            
-            name = Entry(
-                self.properties,
-                fg_color='#011e00',
-                font=('Arial', 15, 'bold'),
-                placeholder_text='Name'
-            )
-            name.insert(0, cls.name)
-            name.place(.1, .1, .2, .05)
+            for y, (txt, info) in enumerate(self.npc_data.items()):
+                self.make_data(cls, 0, y, txt, **info)
+    
+    def make_data(
+        self,
+        cls,
+        x: int,
+        y: int,
+        label_text: str,
+        use_widget: type = Entry,
+        callback: Callable = None,
+        **kwargs
+        ):
+        Label(
+            self.properties,
+            fg_color='#011e00',
+            text=label_text,
+            font=('Arial', 20, 'bold')
+        ).grid(row=y, column=x)
+        
+        d = use_widget(
+            self.properties,
+            fg_color='#011e00',
+            **kwargs
+        )
+        
+        if callback is not None:
+            callback(cls, d, label_text, x=x, y=y, **kwargs)
+        
+        d.grid(row=y, column=x + 1)

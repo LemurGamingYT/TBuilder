@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
 
 from .sound_id import SoundID
+from .value import Value
 from .zones import Zone
 from .drop import Drop
 
@@ -11,7 +12,6 @@ class NPC:
     
     life: int = field(default=0)
     width: int = field(default=0)
-    value: int = field(default=0)
     alpha: int = field(default=0)
     height: int = field(default=0)
     damage: int = field(default=0)
@@ -22,6 +22,7 @@ class NPC:
     apply_buff: int = field(default=-1)
     must_be_day: int = field(default=-1)
     copy_npc_id: int = field(default=-1)
+    apply_buff_seconds: int = field(default=0)
     
     boss: bool = field(default=False)
     no_gravity: bool = field(default=False)
@@ -33,7 +34,7 @@ class NPC:
     
     drops: list[Drop] = field(default_factory=list)
     
+    value: Value = field(default_factory=Value)
+    spawn_biome: Zone = field(default=Zone.NONE)
     hit_sound: SoundID = field(default=SoundID.NPCHIT1)
     death_sound: SoundID = field(default=SoundID.NPCDEATH1)
-    
-    spawn_biome: Zone = field(default=Zone.NONE)

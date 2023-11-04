@@ -1,0 +1,31 @@
+from enum import Enum, auto
+
+
+class Zone(Enum):
+    SKY = auto()
+    HIVE = auto()
+    SNOW = auto()
+    SPACE = auto()
+    BEACH = auto()
+    METEOR = auto()
+    DESERT = auto()
+    FOREST = auto()
+    MARBLE = auto()
+    JUNGLE = auto()
+    HALLOW = auto()
+    GEMCAVE = auto()
+    CORRUPT = auto()
+    CRIMSON = auto()
+    DUNGEON = auto()
+    GRANITE = auto()
+    SHIMMER = auto()
+    GRAVEYARD = auto()
+    UNDERWORLD = auto()
+    TOWER_SOLAR = auto()
+    TOWER_NEBULA = auto()
+    TOWER_VORTEX = auto()
+    TOWER_STARDUST = auto()
+    LIHZARD_TEMPLE = auto()
+    GLOWING_MUSHROOM = auto()
+    
+    NONE = auto()

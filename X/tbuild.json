@@ -1,0 +1,9 @@
+{
+    "project-name": "X",
+    "project-path": "C:/Programming/Python/TBuilder/X",
+    "mod-author": "",
+    "mod-version": "0.1",
+    "mod-buildIgnore": "*.csproj, *.user, obj/*, bin/*, .vs/*",
+    "mod-hideCode": false,
+    "mod-hideResources": false
+}

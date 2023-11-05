@@ -1,11 +1,16 @@
-from pickle import loads, dumps
-from typing import Callable
+from pickle import loads, dumps, UnpicklingError
+from contextlib import suppress
+from subprocess import Popen
 from tkinter import Event
 from pathlib import Path
+from enum import Enum
 
-from widgets import Tk, Label, ScrollableFrame, Menu, Button, Entry, OptionMenu, CheckBox
-from callbacks import entry_callback, create_value_field
-from constants import BUFFS, AISTYLES
+from widgets import Tk, Label, ScrollableFrame, Menu, Button, Entry, CheckBox, OptionMenu
+from assets.utils.names import display_name
+from toplevel.rename_menu import Rename
+from classes.value import Value
+from writer import EditorWriter
+from classes.item import Item
 from classes.npc import NPC
 
 
@@ -14,6 +19,13 @@ class Editor:
         self.data = data
         self.tk = tk
         
+        self.selected_content = None
+        
+        self.project_path = Path(data['project-path'])
+        
+        self.writer = EditorWriter(self)
+        
+        
         tk.state('zoomed')
         tk.resizable(False, False)
         tk.title('TBuilder - Editor')
@@ -21,10 +33,25 @@ class Editor:
         for widget in tk.winfo_children():
             widget.destroy()
         
-        self.adding_menu = Menu(tk, tearoff=0)
-        self.adding_menu.add_command(label='Add NPC', command=self.add_npc)
-        self.adding_menu.add_command(label='Add Item')
-        self.adding_menu.add_command(label='Add Tile')
+        topbar = Menu(tk, tearoff=0, fg='#001c00')
+        
+        filemenu = Menu(topbar, tearoff=0)
+        filemenu.add_command(label='Save', command=lambda: self.save(self.selected_content))
+        filemenu.add_command(label='Build', command=self.writer.build)
+        
+        adding_menu = Menu(tk, tearoff=0)
+        adding_menu.add_command(label='Add NPC', command=self.add_npc)
+        adding_menu.add_command(label='Add Item', command=self.add_item)
+        
+        topbar.add_cascade(label='File', menu=filemenu)
+        topbar.add_cascade(label='Add', menu=adding_menu)
+        
+        self.tk.configure(menu=topbar)
+        
+        self.right_click_item = Menu(tk, tearoff=0)
+        self.right_click_item.add_command(label='Open in File Manager', command=self.open_content)
+        self.right_click_item.add_command(label='Delete', command=self.delete_content)
+        self.right_click_item.add_command(label='Rename', command=self.rename_content)
         
         self.content = ScrollableFrame(
             tk,
@@ -45,24 +72,66 @@ class Editor:
             font=('Arial', 20, 'bold')
         ).pack(fill='x')
         
-        self.project_path = Path(data['project-path'])
-        self.load_mod_content(self.project_path)
+        self.load_mod_content()
+    
+    def delete_content(self):
+        if self.selected_content is None:
+            return
         
-        tk.bind('<Button-3>', self.adding_menu_popup)
+        self.selected_content.unlink()
+        self.load_mod_content()
     
-    def adding_menu_popup(self, event: Event):
+    def rename_content(self):
+        if self.selected_content is None:
+            return
+        
+        def on_close():
+            with suppress(FileExistsError):
+                self.selected_content.rename(self.selected_content.parent / rename.new_name.get())
+                
+            rename.destroy()
+            
+            self.load_mod_content()
+        
+        rename = Rename(self.tk)
+        
+        rename.protocol('WM_DELETE_WINDOW', on_close)
+        
+        rename.mainloop()
+    
+    def open_content(self):
+        if self.selected_content is None:
+            return
+        
+        Popen(f'explorer /select,"{self.selected_content.absolute().as_posix()}"')
+    
+    def save(self, file: Path):
+        self.writer.save(file)
+    
+    def add_right_click_menu(self, event: Event):
         try:
-            self.adding_menu.tk_popup(event.x_root, event.y_root)
+            self.right_click_item.tk_popup(event.x_root, event.y_root)
         finally:
-            self.adding_menu.grab_release()
+            self.right_click_item.grab_release()
     
-    def load_mod_content(self, path: Path):
+    def load_mod_content(self, path: Path = None):
+        if path is None:
+            path = self.project_path
+        
+        for widget in self.content.winfo_children():
+            if not isinstance(widget, Label):
+                widget.destroy()
+        
         mod_content = (path / 'Content').iterdir()
         for content in mod_content:
             if content.is_dir():
                 continue
             
-            o = loads(content.read_bytes())
+            try:
+                o = loads(content.read_bytes())
+            except UnpicklingError:
+                continue
+            
             btn = Button(
                 self.content,
                 corner_radius=25,
@@ -72,7 +141,8 @@ class Editor:
                 font=('Arial', 15, 'bold')
             )
             
-            btn.configure(command=lambda obj=o: self.open_properties(obj))
+            btn.configure(command=lambda obj=o: self.open_properties(obj, content))
+            btn.bind('<Button-3>', self.add_right_click_menu)
             
             btn.pack(fill='x')
     
@@ -83,58 +153,128 @@ class Editor:
         (self.project_path / 'Content' / 'NewNPC').write_bytes(dumps(npc))
         self.load_mod_content(self.project_path)
     
-    entry_args = {'font': ('Arial', 15, 'bold')}
-    
-    npc_data = {
-        'Name': {'callback': entry_callback},
-        'Life': {'callback': entry_callback},
-        'Max Life': {'callback': entry_callback},
-        'Defense': {'callback': entry_callback},
-        'Width': {'callback': entry_callback},
-        'Height': {'callback': entry_callback},
-        'Value': {'callback': create_value_field},
-        'Alpha': {'callback': entry_callback},
-        'Damage': {'callback': entry_callback},
-        'NPC Frames': {'callback': entry_callback},
-        'AIStyle': {'use_widget': OptionMenu, 'values': AISTYLES},
-        'Apply Buff': {'use_widget': OptionMenu, 'values': BUFFS},
-        'Apply Buff Seconds': {'callback': entry_callback},
-        'AI Style': {'callback': entry_callback},
-        'Copy NPC Id': {'callback': entry_callback},
-        'Boss': {'use_widget': CheckBox, 'text': ''},
-        'No Gravity': {'use_widget': CheckBox, 'text': ''},
-        'No Tile Collide': {'use_widget': CheckBox, 'text': ''},
-    }
-    
-    def open_properties(self, cls: NPC):
-        if isinstance(cls, NPC):
-            for y, (txt, info) in enumerate(self.npc_data.items()):
-                self.make_data(cls, 0, y, txt, **info)
-    
-    def make_data(
-        self,
-        cls,
-        x: int,
-        y: int,
-        label_text: str,
-        use_widget: type = Entry,
-        callback: Callable = None,
-        **kwargs
-        ):
-        Label(
-            self.properties,
-            fg_color='#011e00',
-            text=label_text,
-            font=('Arial', 20, 'bold')
-        ).grid(row=y, column=x)
+    def add_item(self):
+        item = Item()
+        item.name = 'NewItem'
         
-        d = use_widget(
-            self.properties,
-            fg_color='#011e00',
-            **kwargs
-        )
+        (self.project_path / 'Content' / 'NewItem').write_bytes(dumps(item))
+        self.load_mod_content(self.project_path)
+    
+    def open_properties(self, cls, content: Path):
+        for widget in self.properties.winfo_children():
+            widget.destroy()
         
-        if callback is not None:
-            callback(cls, d, label_text, x=x, y=y, **kwargs)
+        self.selected_content = content
         
-        d.grid(row=y, column=x + 1)
+        values = zip(cls.__annotations__.values(), cls.__dict__.items())
+        for y, (annotation, (attr_name, attr_value)) in enumerate(values):
+            self.make_property(annotation, attr_name, attr_value, y)
+    
+    default_entry_properties = {'fg_color': '#011e00', 'font': ('Courier New', 15)}
+    default_label_properties = {'fg_color': '#011e00', 'font': ('Arial', 20, 'bold')}
+    default_checkbox_properties = {'fg_color': '#011e00', 'font': ('Courier New', 20, 'bold')}
+    default_optionmenu_properties = {'fg_color': '#011e00'}
+    def make_property(self, annotation: type, attr_name: str, attr_value, y: int) -> None:
+        display = display_name(attr_name)
+        if annotation is str:
+            Label(
+                self.properties,
+                text=display,
+                **self.default_label_properties
+            ).grid(row=y, column=0)
+            
+            e = Entry(
+                self.properties,
+                placeholder_text=display,
+                **self.default_entry_properties
+            )
+            e.insert(0, attr_value)
+            e.grid(row=y, column=1)
+        elif annotation is int:
+            Label(
+                self.properties,
+                text=display,
+                **self.default_label_properties
+            ).grid(row=y, column=0)
+            
+            e = Entry(
+                self.properties,
+                placeholder_text=display,
+                **self.default_entry_properties
+            )
+            e.insert(0, str(attr_value))
+            e.grid(row=y, column=1)
+        elif annotation is float:
+            Label(
+                self.properties,
+                text=display,
+                **self.default_label_properties
+            ).grid(row=y, column=0)
+            
+            e = Entry(
+                self.properties,
+                placeholder_text=display,
+                **self.default_entry_properties
+            )
+            e.insert(0, str(attr_value))
+            e.grid(row=y, column=1)
+        elif annotation is bool:
+            CheckBox(
+                self.properties,
+                text=display,
+                **self.default_checkbox_properties
+            ).grid(row=y, column=0, sticky='w')
+        elif issubclass(annotation, Enum):
+            Label(
+                self.properties,
+                text=display,
+                **self.default_label_properties
+            ).grid(row=y, column=0)
+            
+            OptionMenu(
+                self.properties,
+                values=[
+                    attr
+                    for attr in dir(attr_value)
+                    if attr not in {'name', 'value'} and not attr.startswith('__')
+                ],
+                **self.default_optionmenu_properties
+            ).grid(row=y, column=1)
+        elif annotation is Value:
+            Label(
+                self.properties,
+                text=display,
+                **self.default_label_properties
+            ).grid(row=y, column=0)
+            
+            plat = Entry(
+                self.properties,
+                placeholder_text='Platinum',
+                **self.default_entry_properties
+            )
+            plat.insert(0, str(attr_value.platinum))
+            plat.grid(row=y, column=1)
+            
+            gold = Entry(
+                self.properties,
+                placeholder_text='Gold',
+                **self.default_entry_properties
+            )
+            gold.insert(0, str(attr_value.gold))
+            gold.grid(row=y, column=2)
+            
+            silver = Entry(
+                self.properties,
+                placeholder_text='Silver',
+                **self.default_entry_properties
+            )
+            silver.insert(0, str(attr_value.silver))
+            silver.grid(row=y, column=3)
+            
+            copper = Entry(
+                self.properties,
+                placeholder_text='Copper',
+                **self.default_entry_properties
+            )
+            copper.insert(0, str(attr_value.copper))
+            copper.grid(row=y, column=4)

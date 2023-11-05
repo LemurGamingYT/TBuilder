@@ -11,7 +11,14 @@ arg_parser = ArgumentParser(description='Utility program to immediately generate
 arg_parser.add_argument('url', help='URL of the documentation')
 arg_parser.add_argument('-o', '--output', type=Path, help='Output file name')
 
+arg_parser.add_argument('-n', '--name', help='Set the name of the Enum (if -e is used)')
+
+arg_parser.add_argument('-e', '--enum', help='Generates an enum instead of list', action='store_true')
+
 args = arg_parser.parse_args()
+
+
+name = args.name if args.name is not None else 'TDocEnum'
 
 
 req = get(args.url)
@@ -30,4 +37,11 @@ for link in soup.find_all('tr'):
 
 
 if args.output is not None:
-    args.output.write_text(dumps(out, indent=4))
+    if args.enum:
+        text = 'from enum import Enum, auto\n\nclass {}(Enum):\n\t'.format(name)
+        for element in out:
+            text += element.upper() + ' = auto()\n\t'
+        
+        args.output.write_text(text)
+    else:
+        args.output.write_text(dumps(out, indent=4))

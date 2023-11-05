@@ -1,7 +1,7 @@
 {
-    "X": {
-        "project-name": "X",
-        "project-path": "C:/Programming/Python/TBuilder/X",
+    "Test": {
+        "project-name": "Test",
+        "project-path": "C:/Programming/Python/TBuilder/Test",
         "mod-author": "",
         "mod-version": "0.1",
         "mod-buildIgnore": "*.csproj, *.user, obj/*, bin/*, .vs/*",

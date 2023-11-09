@@ -254,6 +254,7 @@ namespace {o.name}
 \t\t\tItem.useAnimation = {o.use_animation};
 \t\t\tItem.shoot = {o.shoot_id};
 \t\t}}
+\t}}
 }}"""
         
         return text

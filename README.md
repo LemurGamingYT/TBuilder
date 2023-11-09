@@ -1,5 +1,5 @@
 # TBuilder
- *Proof of concept*
+ *Concept*
  An app that makes creating terraria mods (tmodloader) easier and more intuitive (meant for people who don't
  code)
 
